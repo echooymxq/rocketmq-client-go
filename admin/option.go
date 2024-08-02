@@ -17,6 +17,8 @@ limitations under the License.
 
 package admin
 
+import "fmt"
+
 func defaultTopicConfigCreate() TopicConfigCreate {
 	opts := TopicConfigCreate{
 		DefaultTopic:    "defaultTopic",
@@ -26,6 +28,7 @@ func defaultTopicConfigCreate() TopicConfigCreate {
 		TopicFilterType: "SINGLE_TAG",
 		TopicSysFlag:    0,
 		Order:           false,
+		Attributes:      "",
 	}
 	return opts
 }
@@ -40,6 +43,7 @@ type TopicConfigCreate struct {
 	TopicFilterType string
 	TopicSysFlag    int
 	Order           bool
+	Attributes      string
 }
 
 type OptionCreate func(*TopicConfigCreate)
@@ -89,6 +93,17 @@ func WithTopicSysFlag(TopicSysFlag int) OptionCreate {
 func WithOrder(Order bool) OptionCreate {
 	return func(opts *TopicConfigCreate) {
 		opts.Order = Order
+	}
+}
+
+// WithAttribute +key1=value1,+key2=value2
+func WithAttribute(key string, val string) OptionCreate {
+	return func(opts *TopicConfigCreate) {
+		if len(opts.Attributes) == 0 {
+			opts.Attributes = fmt.Sprintf("+%s=%s", key, val)
+		} else {
+			opts.Attributes = fmt.Sprintf("%s,+%s=%s", opts.Attributes, key, val)
+		}
 	}
 }
 

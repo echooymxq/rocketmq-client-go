@@ -177,6 +177,7 @@ func (a *admin) CreateTopic(ctx context.Context, opts ...OptionCreate) error {
 		TopicFilterType: cfg.TopicFilterType,
 		TopicSysFlag:    cfg.TopicSysFlag,
 		Order:           cfg.Order,
+		Attributes:      cfg.Attributes,
 	}
 
 	cmd := remote.NewRemotingCommand(internal.ReqCreateTopic, request, nil)

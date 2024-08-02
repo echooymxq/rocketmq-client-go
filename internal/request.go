@@ -382,6 +382,7 @@ type CreateTopicRequestHeader struct {
 	TopicFilterType string
 	TopicSysFlag    int
 	Order           bool
+	Attributes      string
 }
 
 func (request *CreateTopicRequestHeader) Encode() map[string]string {
@@ -394,6 +395,7 @@ func (request *CreateTopicRequestHeader) Encode() map[string]string {
 	maps["topicFilterType"] = request.TopicFilterType
 	maps["topicSysFlag"] = fmt.Sprintf("%d", request.TopicSysFlag)
 	maps["order"] = strconv.FormatBool(request.Order)
+	maps["attributes"] = request.Attributes
 
 	return maps
 }
