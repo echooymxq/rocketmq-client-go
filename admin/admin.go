@@ -19,6 +19,7 @@ package admin
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"sync"
 	"time"
@@ -40,6 +41,8 @@ type Admin interface {
 	FetchPublishMessageQueues(ctx context.Context, topic string) ([]*primitive.MessageQueue, error)
 	ExamineTopicRouteInfo(ctx context.Context, topic string) (*internal.TopicRouteData, error)
 	ExamineTopicConfig(ctx context.Context, addr string, topic string) (*TopicConfig, error)
+	ExamineBrokerClusterInfo() (*ClusterInfo, error)
+	CreateSubscriptionGroup(ctx context.Context, opts ...OptionSubscriptionCreate) error
 	Close() error
 }
 
@@ -295,6 +298,86 @@ func (a *admin) ExamineTopicConfig(ctx context.Context, addr string, topic strin
 		return nil, err
 	}
 	return &topicConfig, nil
+}
+
+func (a *admin) ExamineBrokerClusterInfo() (*ClusterInfo, error) {
+	var (
+		response *remote.RemotingCommand
+		err      error
+	)
+
+	namesrvs := a.cli.GetNameSrv().AddrList()
+	for i := 0; i < len(namesrvs); i++ {
+		rc := remote.NewRemotingCommand(internal.ReqGetBrokerClusterInfo, nil, nil)
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		response, err = a.cli.InvokeSync(ctx, namesrvs[i], rc, 5*time.Second)
+
+		if err == nil {
+			cancel()
+			break
+		}
+		cancel()
+	}
+
+	if err != nil {
+		return nil, primitive.NewRemotingErr(err.Error())
+	}
+
+	var clusterInfo ClusterInfo
+	err = clusterInfo.Decode(string(response.Body))
+	return &clusterInfo, err
+}
+
+func (a *admin) CreateSubscriptionGroup(ctx context.Context, opts ...OptionSubscriptionCreate) error {
+	cfg := defaultSubscriptionConfigCreate()
+	for _, apply := range opts {
+		apply(&cfg)
+	}
+
+	var (
+		brokerAddr string
+		err        error
+	)
+
+	data, err := json.Marshal(cfg)
+
+	if err == nil {
+		if len(cfg.BrokerAddr) == 0 {
+			clusterInfo, e := a.ExamineBrokerClusterInfo()
+			if e != nil {
+				return e
+			}
+			for _, brokerAddrTable := range clusterInfo.BrokerAddrTable {
+				brokerAddr = brokerAddrTable.BrokerAddresses[internal.MasterId]
+				cmd := remote.NewRemotingCommand(internal.ReqCreateSubscriptionGroupConfig, nil, data)
+				_, err = a.cli.InvokeSync(ctx, brokerAddr, cmd, 5*time.Second)
+				if err == nil {
+					rlog.Info("create group success", map[string]interface{}{
+						rlog.LogKeyConsumerGroup: cfg.GroupName,
+						rlog.LogKeyBroker:        brokerAddr,
+					})
+				}
+			}
+		} else {
+			cmd := remote.NewRemotingCommand(internal.ReqCreateSubscriptionGroupConfig, nil, data)
+			_, err = a.cli.InvokeSync(ctx, cfg.BrokerAddr, cmd, 5*time.Second)
+			if err == nil {
+				rlog.Info("create group success", map[string]interface{}{
+					rlog.LogKeyConsumerGroup: cfg.GroupName,
+					rlog.LogKeyBroker:        brokerAddr,
+				})
+			}
+		}
+	}
+
+	if err != nil {
+		rlog.Error("create group error", map[string]interface{}{
+			rlog.LogKeyConsumerGroup: cfg.GroupName,
+			rlog.LogKeyBroker:        brokerAddr,
+			rlog.LogKeyUnderlayError: err,
+		})
+	}
+	return err
 }
 
 func (a *admin) Close() error {

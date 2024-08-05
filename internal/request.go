@@ -45,6 +45,7 @@ const (
 	ReqSendBatchMessage              = int16(320)
 	ReqCheckTransactionState         = int16(39)
 	ReqNotifyConsumerIdsChanged      = int16(40)
+	ReqCreateSubscriptionGroupConfig = int16(200)
 	ReqGetAllSubscriptionGroupConfig = int16(201)
 	ReqGetAllTopicListFromNameServer = int16(206)
 	ReqDeleteTopicInBroker           = int16(215)

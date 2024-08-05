@@ -144,3 +144,45 @@ func WithNameSrvAddr(NameSrvAddr []string) OptionDelete {
 		opts.NameSrvAddr = NameSrvAddr
 	}
 }
+
+func defaultSubscriptionConfigCreate() SubscriptionConfigCreate {
+	opts := SubscriptionConfigCreate{
+		RetryQueueNums: 1,
+		RetryMaxTimes:  16,
+	}
+	return opts
+}
+
+type SubscriptionConfigCreate struct {
+	GroupName      string
+	BrokerAddr     string
+	RetryQueueNums int
+	RetryMaxTimes  int
+	Attributes     string
+}
+
+type OptionSubscriptionCreate func(*SubscriptionConfigCreate)
+
+func WithGroupName(GroupName string) OptionSubscriptionCreate {
+	return func(opts *SubscriptionConfigCreate) {
+		opts.GroupName = GroupName
+	}
+}
+
+func WithBrokerAddr(BrokerAddr string) OptionSubscriptionCreate {
+	return func(opts *SubscriptionConfigCreate) {
+		opts.BrokerAddr = BrokerAddr
+	}
+}
+
+func WithRetryQueueNums(RetryQueueNums int) OptionSubscriptionCreate {
+	return func(opts *SubscriptionConfigCreate) {
+		opts.RetryQueueNums = RetryQueueNums
+	}
+}
+
+func WithRetryMaxTimes(RetryMaxTimes int) OptionSubscriptionCreate {
+	return func(opts *SubscriptionConfigCreate) {
+		opts.RetryMaxTimes = RetryMaxTimes
+	}
+}

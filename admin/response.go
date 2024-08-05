@@ -17,7 +17,14 @@ limitations under the License.
 
 package admin
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"github.com/apache/rocketmq-client-go/v2/internal"
+	jsoniter "github.com/json-iterator/go"
+	"github.com/tidwall/gjson"
+	"strconv"
+	"strings"
+)
 
 type RemotingSerializable struct {
 }
@@ -95,4 +102,44 @@ type TopicConfig struct {
 	Order          bool
 	Attributes     map[string]string
 	RemotingSerializable
+}
+
+type ClusterInfo struct {
+	BrokerAddrTable  map[string]internal.BrokerData
+	ClusterAddrTable map[string][]string
+	RemotingSerializable
+}
+
+func (clusterData *ClusterInfo) Decode(data string) error {
+	res := gjson.Parse(data)
+	err := jsoniter.Unmarshal([]byte(res.Get("clusterAddrTable").String()), &clusterData.ClusterAddrTable)
+
+	if err != nil {
+		return err
+	}
+
+	brokerAddrTable := res.Get("brokerAddrTable").Map()
+	clusterData.BrokerAddrTable = make(map[string]internal.BrokerData)
+	for brokerName, v := range brokerAddrTable {
+		bd := &internal.BrokerData{
+			BrokerName:      v.Get("brokerName").String(),
+			Cluster:         v.Get("cluster").String(),
+			BrokerAddresses: make(map[int64]string, 0),
+		}
+		addrs := v.Get("brokerAddrs").String()
+		strs := strings.Split(addrs[1:len(addrs)-1], ",")
+		if strs != nil {
+			for _, str := range strs {
+				i := strings.Index(str, ":")
+				if i < 0 {
+					continue
+				}
+				brokerId := strings.ReplaceAll(str[0:i], "\"", "")
+				id, _ := strconv.ParseInt(brokerId, 10, 64)
+				bd.BrokerAddresses[id] = strings.Replace(str[i+1:], "\"", "", -1)
+			}
+		}
+		clusterData.BrokerAddrTable[brokerName] = *bd
+	}
+	return nil
 }
