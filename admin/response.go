@@ -86,3 +86,13 @@ type SubscriptionGroupConfig struct {
 	WhichBrokerWhenConsumeSlowly   int
 	NotifyConsumerIdsChangedEnable bool
 }
+
+type TopicConfig struct {
+	TopicName      string
+	ReadQueueNums  int
+	WriteQueueNums int
+	Perm           int
+	Order          bool
+	Attributes     map[string]string
+	RemotingSerializable
+}

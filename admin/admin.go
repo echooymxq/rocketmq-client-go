@@ -38,6 +38,8 @@ type Admin interface {
 	FetchAllTopicList(ctx context.Context) (*TopicList, error)
 	//GetBrokerClusterInfo(ctx context.Context) (*remote.RemotingCommand, error)
 	FetchPublishMessageQueues(ctx context.Context, topic string) ([]*primitive.MessageQueue, error)
+	ExamineTopicRouteInfo(ctx context.Context, topic string) (*internal.TopicRouteData, error)
+	ExamineTopicConfig(ctx context.Context, addr string, topic string) (*TopicConfig, error)
 	Close() error
 }
 
@@ -272,6 +274,27 @@ func (a *admin) DeleteTopic(ctx context.Context, opts ...OptionDelete) error {
 
 func (a *admin) FetchPublishMessageQueues(ctx context.Context, topic string) ([]*primitive.MessageQueue, error) {
 	return a.cli.GetNameSrv().FetchPublishMessageQueues(utils.WrapNamespace(a.opts.Namespace, topic))
+}
+
+func (a *admin) ExamineTopicRouteInfo(ctx context.Context, topic string) (*internal.TopicRouteData, error) {
+	return a.cli.GetNameSrv().QueryTopicRouteInfo(topic)
+}
+
+func (a *admin) ExamineTopicConfig(ctx context.Context, addr string, topic string) (*TopicConfig, error) {
+	request := &internal.GetTopicConfigRequestHeader{
+		Topic: topic,
+	}
+	cmd := remote.NewRemotingCommand(internal.ReqGetTopicConfig, request, nil)
+	response, err := a.cli.InvokeSync(ctx, addr, cmd, 5*time.Second)
+	if err != nil {
+		return nil, err
+	}
+	var topicConfig TopicConfig
+	_, err = topicConfig.Decode(response.Body, &topicConfig)
+	if err != nil {
+		return nil, err
+	}
+	return &topicConfig, nil
 }
 
 func (a *admin) Close() error {

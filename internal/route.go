@@ -444,6 +444,10 @@ func (s *namesrvs) queryTopicRouteInfoFromServer(topic string) (*TopicRouteData,
 	}
 }
 
+func (s *namesrvs) QueryTopicRouteInfo(topic string) (*TopicRouteData, error) {
+	return s.queryTopicRouteInfoFromServer(topic)
+}
+
 func (s *namesrvs) topicRouteDataIsChange(oldData *TopicRouteData, newData *TopicRouteData) bool {
 	if oldData == nil || newData == nil {
 		return true

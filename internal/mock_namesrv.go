@@ -191,3 +191,16 @@ func (mr *MockNamesrvsMockRecorder) AddrList() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddrList", reflect.TypeOf((*MockNamesrvs)(nil).AddrList))
 }
+
+func (m *MockNamesrvs) QueryTopicRouteInfo(topic string) (*TopicRouteData, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "QueryTopicRouteInfo", topic)
+	ret0, _ := ret[0].(*TopicRouteData)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+func (mr *MockNamesrvsMockRecorder) QueryTopicRouteInfo(topic interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "QueryTopicRouteInfo", reflect.TypeOf((*MockNamesrvs)(nil).QueryTopicRouteInfo), topic)
+}

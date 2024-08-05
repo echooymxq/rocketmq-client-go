@@ -56,6 +56,7 @@ const (
 	ReqSendReplyMessage              = int16(324)
 	ReqSendReplyMessageV2            = int16(325)
 	ReqPushReplyMessageToClient      = int16(326)
+	ReqGetTopicConfig                = int16(351)
 )
 
 type SendMessageRequestHeader struct {
@@ -617,5 +618,15 @@ func (request *ReplyMessageRequestHeader) Decode(properties map[string]string) {
 
 	if v, existed := properties["storeTimestamp"]; existed {
 		request.storeTimestamp, _ = strconv.ParseInt(v, 10, 0)
+	}
+}
+
+type GetTopicConfigRequestHeader struct {
+	Topic string
+}
+
+func (request *GetTopicConfigRequestHeader) Encode() map[string]string {
+	return map[string]string{
+		"topic": request.Topic,
 	}
 }

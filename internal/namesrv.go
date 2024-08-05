@@ -63,6 +63,8 @@ type Namesrvs interface {
 	FetchSubscribeMessageQueues(topic string) ([]*primitive.MessageQueue, error)
 
 	AddrList() []string
+
+	QueryTopicRouteInfo(topic string) (*TopicRouteData, error)
 }
 
 // namesrvs rocketmq namesrv instance.
