@@ -36,7 +36,7 @@ const (
 	//ResponseType for response
 	ResponseType = 1
 	_Flag        = 0
-	_Version     = 317
+	_Version     = 401
 )
 
 type LanguageCode byte
