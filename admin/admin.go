@@ -43,6 +43,7 @@ type Admin interface {
 	ExamineTopicConfig(ctx context.Context, addr string, topic string) (*TopicConfig, error)
 	ExamineBrokerClusterInfo() (*ClusterInfo, error)
 	CreateSubscriptionGroup(ctx context.Context, opts ...OptionSubscriptionCreate) error
+	ViewMessage(offsetMsgId string) (*primitive.MessageExt, error)
 	Close() error
 }
 
@@ -378,6 +379,30 @@ func (a *admin) CreateSubscriptionGroup(ctx context.Context, opts ...OptionSubsc
 		})
 	}
 	return err
+}
+
+func (a *admin) ViewMessage(offsetMsgId string) (*primitive.MessageExt, error) {
+	messageID, err := primitive.UnmarshalMsgID([]byte(offsetMsgId))
+	if err != nil {
+		return nil, err
+	}
+	request := &internal.ViewMessageRequestHeader{
+		Offset: messageID.Offset,
+	}
+
+	cmd := remote.NewRemotingCommand(internal.ReqViewMessageByID, request, nil)
+
+	res, err := a.cli.InvokeSync(context.Background(), fmt.Sprintf("%s:%d", messageID.Addr, messageID.Port), cmd, 5*time.Second)
+
+	if err == nil {
+		if res.Code == internal.ResSuccess {
+			messageExt := primitive.DecodeMessage(res.Body)[0]
+			return messageExt, err
+		} else {
+			err = fmt.Errorf("view message error: CODE:%d, Remark:%s", res.Code, res.Remark)
+		}
+	}
+	return nil, err
 }
 
 func (a *admin) Close() error {
