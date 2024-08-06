@@ -92,6 +92,7 @@ type SubscriptionGroupConfig struct {
 	BrokerId                       int
 	WhichBrokerWhenConsumeSlowly   int
 	NotifyConsumerIdsChangedEnable bool
+	RemotingSerializable
 }
 
 type TopicConfig struct {
