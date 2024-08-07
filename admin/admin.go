@@ -18,9 +18,12 @@ limitations under the License.
 package admin
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/pkg/errors"
+	"strings"
 	"sync"
 	"time"
 
@@ -44,6 +47,8 @@ type Admin interface {
 	ExamineBrokerClusterInfo() (*ClusterInfo, error)
 	CreateSubscriptionGroup(ctx context.Context, opts ...OptionSubscriptionCreate) error
 	ViewMessage(offsetMsgId string) (*primitive.MessageExt, error)
+	GetBrokerConfig(addr string) (map[string]string, error)
+	UpdateBrokerConfig(addr, configKey, configValue string) error
 	Close() error
 }
 
@@ -403,6 +408,49 @@ func (a *admin) ViewMessage(offsetMsgId string) (*primitive.MessageExt, error) {
 		}
 	}
 	return nil, err
+}
+
+func (a *admin) GetBrokerConfig(addr string) (map[string]string, error) {
+	cmd := remote.NewRemotingCommand(internal.ReqGetBrokerConfig, nil, nil)
+	res, err := a.cli.InvokeSync(context.Background(), addr, cmd, 5*time.Second)
+	if err != nil {
+		return nil, err
+	}
+
+	if res.Code != internal.ResSuccess {
+		return nil, fmt.Errorf("get broker config response code: %d, remarks: %s", res.Code, res.Remark)
+	}
+
+	properties := make(map[string]string)
+
+	scanner := bufio.NewScanner(strings.NewReader(string(res.Body)))
+	for scanner.Scan() {
+		line := scanner.Text()
+		parts := strings.SplitN(line, "=", 2)
+		if len(parts) == 2 {
+			key := strings.TrimSpace(parts[0])
+			value := strings.TrimSpace(parts[1])
+			properties[key] = value
+		}
+	}
+	return properties, nil
+}
+
+func (a *admin) UpdateBrokerConfig(addr, configKey, configValue string) error {
+	if len(configKey) < 0 || len(configValue) < 0 {
+		return errors.New("config key or value is not valid")
+	}
+
+	configStr := fmt.Sprintf("%s=%s", configKey, configValue)
+	cmd := remote.NewRemotingCommand(internal.ReqUpdateBrokerConfig, nil, []byte(configStr))
+	res, err := a.cli.InvokeSync(context.Background(), addr, cmd, 5*time.Second)
+	if err != nil {
+		return err
+	}
+	if res.Code != internal.ResSuccess {
+		return fmt.Errorf("update broker config error, %s", res.Remark)
+	}
+	return nil
 }
 
 func (a *admin) Close() error {

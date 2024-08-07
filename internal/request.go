@@ -30,6 +30,8 @@ const (
 	ReqQueryConsumerOffset           = int16(14)
 	ReqUpdateConsumerOffset          = int16(15)
 	ReqCreateTopic                   = int16(17)
+	ReqUpdateBrokerConfig            = int16(25)
+	ReqGetBrokerConfig               = int16(26)
 	ReqSearchOffsetByTimestamp       = int16(29)
 	ReqGetMaxOffset                  = int16(30)
 	ReqGetMinOffset                  = int16(31)
