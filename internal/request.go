@@ -56,6 +56,8 @@ const (
 	ReqGetConsumerStatsFromClient    = int16(221)
 	ReqGetConsumerRunningInfo        = int16(307)
 	ReqConsumeMessageDirectly        = int16(309)
+	ReqUpdateNamesrvConfig           = int16(318)
+	ReqGetNamesrvConfig              = int16(319)
 	ReqSendReplyMessage              = int16(324)
 	ReqSendReplyMessageV2            = int16(325)
 	ReqPushReplyMessageToClient      = int16(326)

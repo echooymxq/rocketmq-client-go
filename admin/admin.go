@@ -49,6 +49,8 @@ type Admin interface {
 	ViewMessage(offsetMsgId string) (*primitive.MessageExt, error)
 	GetBrokerConfig(addr string) (map[string]string, error)
 	UpdateBrokerConfig(addr, configKey, configValue string) error
+	GetNamesrvConfig(addr string) (map[string]string, error)
+	UpdateNamesrvConfig(addr, configKey, configValue string) error
 	Close() error
 }
 
@@ -449,6 +451,49 @@ func (a *admin) UpdateBrokerConfig(addr, configKey, configValue string) error {
 	}
 	if res.Code != internal.ResSuccess {
 		return fmt.Errorf("update broker config error, %s", res.Remark)
+	}
+	return nil
+}
+
+func (a *admin) GetNamesrvConfig(addr string) (map[string]string, error) {
+	cmd := remote.NewRemotingCommand(internal.ReqGetNamesrvConfig, nil, nil)
+	res, err := a.cli.InvokeSync(context.Background(), addr, cmd, 5*time.Second)
+	if err != nil {
+		return nil, err
+	}
+
+	if res.Code != internal.ResSuccess {
+		return nil, fmt.Errorf("get namesrv config response code: %d, remarks: %s", res.Code, res.Remark)
+	}
+
+	properties := make(map[string]string)
+
+	scanner := bufio.NewScanner(strings.NewReader(string(res.Body)))
+	for scanner.Scan() {
+		line := scanner.Text()
+		parts := strings.SplitN(line, "=", 2)
+		if len(parts) == 2 {
+			key := strings.TrimSpace(parts[0])
+			value := strings.TrimSpace(parts[1])
+			properties[key] = value
+		}
+	}
+	return properties, nil
+}
+
+func (a *admin) UpdateNamesrvConfig(addr, configKey, configValue string) error {
+	if len(configKey) < 0 || len(configValue) < 0 {
+		return errors.New("config key or value is not valid")
+	}
+
+	configStr := fmt.Sprintf("%s=%s", configKey, configValue)
+	cmd := remote.NewRemotingCommand(internal.ReqUpdateNamesrvConfig, nil, []byte(configStr))
+	res, err := a.cli.InvokeSync(context.Background(), addr, cmd, 5*time.Second)
+	if err != nil {
+		return err
+	}
+	if res.Code != internal.ResSuccess {
+		return fmt.Errorf("update namesrv config error, %s", res.Remark)
 	}
 	return nil
 }
