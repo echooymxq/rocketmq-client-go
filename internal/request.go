@@ -50,6 +50,7 @@ const (
 	ReqCreateSubscriptionGroupConfig = int16(200)
 	ReqGetAllSubscriptionGroupConfig = int16(201)
 	ReqGetTopicStatsInfo             = int16(202)
+	ReqGetConsumerConnectionList     = int16(203)
 	ReqGetAllTopicListFromNameServer = int16(206)
 	ReqGetConsumerStats              = int16(208)
 	ReqDeleteTopicInBroker           = int16(215)
@@ -657,5 +658,15 @@ func (request *GetConsumeStatsRequestHeader) Encode() map[string]string {
 	return map[string]string{
 		"consumerGroup": request.ConsumerGroup,
 		"topic":         request.Topic,
+	}
+}
+
+type GetConsumerConnectionListHeader struct {
+	ConsumerGroup string
+}
+
+func (request *GetConsumerConnectionListHeader) Encode() map[string]string {
+	return map[string]string{
+		"consumerGroup": request.ConsumerGroup,
 	}
 }

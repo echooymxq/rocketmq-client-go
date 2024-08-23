@@ -19,6 +19,7 @@ package admin
 
 import (
 	"encoding/json"
+	"github.com/apache/rocketmq-client-go/v2/consumer"
 	"github.com/apache/rocketmq-client-go/v2/internal"
 	"github.com/apache/rocketmq-client-go/v2/primitive"
 	jsoniter "github.com/json-iterator/go"
@@ -227,4 +228,20 @@ func (consumeStats *ConsumeStats) Decode(data string) error {
 	}
 	consumeStats.OffsetTable = offsetTable
 	return err
+}
+
+type ConsumerConnection struct {
+	ConnectionSet     []Connection
+	SubscriptionTable map[string]internal.SubscriptionData
+	ConsumeType       consumer.ConsumeType
+	MessageModel      string
+	ConsumeFromWhere  string
+	RemotingSerializable
+}
+
+type Connection struct {
+	ClientId   string
+	ClientAddr string
+	Language   string
+	Version    int64
 }

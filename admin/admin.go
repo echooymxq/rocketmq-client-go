@@ -23,6 +23,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/pkg/errors"
+	"math/rand"
 	"strings"
 	"sync"
 	"time"
@@ -53,6 +54,8 @@ type Admin interface {
 	UpdateNamesrvConfig(addr, configKey, configValue string) error
 	ExamineTopicStats(topic string) (*TopicStatsTable, error)
 	ExamineTopicConsumeStats(group, topic string) (*ConsumeStats, error)
+	ExamineConsumerConnectionInfo(group string) (*ConsumerConnection, error)
+	ExamineBrokerConsumerConnectionInfo(addr, group string) (*ConsumerConnection, error)
 	Close() error
 }
 
@@ -559,6 +562,39 @@ func (a *admin) ExamineTopicConsumeStats(group, topic string) (*ConsumeStats, er
 		}
 	}
 	return nil, err
+}
+
+func (a *admin) ExamineConsumerConnectionInfo(group string) (*ConsumerConnection, error) {
+	retryTopic := internal.GetRetryTopic(group)
+	topicRouteData, _ := a.ExamineTopicRouteInfo(context.Background(), retryTopic)
+	brokerDataList := topicRouteData.BrokerDataList
+	addr := a.selectBrokerAddr(brokerDataList)
+	return a.ExamineBrokerConsumerConnectionInfo(addr, group)
+}
+
+func (a *admin) ExamineBrokerConsumerConnectionInfo(addr, group string) (*ConsumerConnection, error) {
+	request := &internal.GetConsumerConnectionListHeader{
+		ConsumerGroup: group,
+	}
+	cmd := remote.NewRemotingCommand(internal.ReqGetConsumerConnectionList, request, nil)
+	res, err := a.cli.InvokeSync(context.Background(), addr, cmd, 5*time.Second)
+	if err != nil {
+		return nil, err
+	}
+
+	if res.Code != internal.ResSuccess {
+		return nil, fmt.Errorf("get consumer connection error, %s", res.Remark)
+	}
+
+	var consumerConnection ConsumerConnection
+	_, err = consumerConnection.Decode(res.Body, &consumerConnection)
+	return &consumerConnection, err
+}
+
+func (a *admin) selectBrokerAddr(brokerDataList []*internal.BrokerData) string {
+	brokerData := brokerDataList[rand.Intn(len(brokerDataList))]
+	addr := brokerData.BrokerAddresses[internal.MasterId]
+	return addr
 }
 
 func (a *admin) Close() error {
