@@ -49,7 +49,9 @@ const (
 	ReqNotifyConsumerIdsChanged      = int16(40)
 	ReqCreateSubscriptionGroupConfig = int16(200)
 	ReqGetAllSubscriptionGroupConfig = int16(201)
+	ReqGetTopicStatsInfo             = int16(202)
 	ReqGetAllTopicListFromNameServer = int16(206)
+	ReqGetConsumerStats              = int16(208)
 	ReqDeleteTopicInBroker           = int16(215)
 	ReqDeleteTopicInNameSrv          = int16(216)
 	ReqResetConsumerOffset           = int16(220)
@@ -633,5 +635,27 @@ type GetTopicConfigRequestHeader struct {
 func (request *GetTopicConfigRequestHeader) Encode() map[string]string {
 	return map[string]string{
 		"topic": request.Topic,
+	}
+}
+
+type GetTopicStatsInfoRequestHeader struct {
+	Topic string
+}
+
+func (request *GetTopicStatsInfoRequestHeader) Encode() map[string]string {
+	return map[string]string{
+		"topic": request.Topic,
+	}
+}
+
+type GetConsumeStatsRequestHeader struct {
+	ConsumerGroup string
+	Topic         string
+}
+
+func (request *GetConsumeStatsRequestHeader) Encode() map[string]string {
+	return map[string]string{
+		"consumerGroup": request.ConsumerGroup,
+		"topic":         request.Topic,
 	}
 }

@@ -659,6 +659,20 @@ type BrokerData struct {
 	brokerAddressesLock sync.RWMutex
 }
 
+func (b *BrokerData) SelectBrokerAddr() string {
+	masterAddress, exists := b.BrokerAddresses[MasterId]
+
+	if !exists {
+		addrs := make([]string, 0, len(b.BrokerAddresses))
+		for _, addr := range b.BrokerAddresses {
+			addrs = append(addrs, addr)
+		}
+		return addrs[rand.Intn(len(addrs))]
+	}
+
+	return masterAddress
+}
+
 func (b *BrokerData) Equals(bd *BrokerData) bool {
 	if b.Cluster != bd.Cluster {
 		return false

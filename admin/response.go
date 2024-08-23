@@ -20,6 +20,7 @@ package admin
 import (
 	"encoding/json"
 	"github.com/apache/rocketmq-client-go/v2/internal"
+	"github.com/apache/rocketmq-client-go/v2/primitive"
 	jsoniter "github.com/json-iterator/go"
 	"github.com/tidwall/gjson"
 	"strconv"
@@ -143,4 +144,87 @@ func (clusterData *ClusterInfo) Decode(data string) error {
 		clusterData.BrokerAddrTable[brokerName] = *bd
 	}
 	return nil
+}
+
+type TopicOffset struct {
+	MinOffset           int64
+	MaxOffset           int64
+	LastUpdateTimestamp int64
+}
+
+type TopicStatsTable struct {
+	OffsetTable map[primitive.MessageQueue]TopicOffset
+	RemotingSerializable
+}
+
+func (topicStatsTable *TopicStatsTable) Decode(data string) error {
+	res := gjson.Parse(data)
+	offsetTableStr := res.Get("offsetTable").String()
+
+	offsetTable := make(map[primitive.MessageQueue]TopicOffset)
+
+	trimStr := offsetTableStr[2 : len(offsetTableStr)-1]
+
+	split := strings.Split(trimStr, ",{")
+
+	var err error
+
+	for _, v := range split {
+		tuple := strings.Split(v, "}:")
+
+		queueStr := "{" + tuple[0] + "}"
+
+		var queue primitive.MessageQueue
+		err = json.Unmarshal([]byte(queueStr), &queue)
+
+		var topicOffset TopicOffset
+		err = json.Unmarshal([]byte(tuple[1]), &topicOffset)
+		offsetTable[queue] = topicOffset
+	}
+	topicStatsTable.OffsetTable = offsetTable
+	return err
+}
+
+type OffsetWrapper struct {
+	BrokerOffset   int64
+	ConsumerOffset int64
+	LastTimestamp  int64
+}
+
+type ConsumeStats struct {
+	OffsetTable     map[primitive.MessageQueue]OffsetWrapper
+	ConsumeTps      float64
+	ConsumeByteRate float64
+	RemotingSerializable
+}
+
+func (consumeStats *ConsumeStats) Decode(data string) error {
+	res := gjson.Parse(data)
+	consumeStats.ConsumeByteRate = res.Get("consumeByteRate").Float()
+	consumeStats.ConsumeTps = res.Get("consumeTps").Float()
+
+	offsetTableStr := res.Get("offsetTable").String()
+
+	offsetTable := make(map[primitive.MessageQueue]OffsetWrapper)
+
+	trimStr := offsetTableStr[2 : len(offsetTableStr)-1]
+
+	split := strings.Split(trimStr, ",{")
+
+	var err error
+
+	for _, v := range split {
+		tuple := strings.Split(v, "}:")
+
+		queueStr := "{" + tuple[0] + "}"
+
+		var queue primitive.MessageQueue
+		err = json.Unmarshal([]byte(queueStr), &queue)
+
+		var offsetWrapper OffsetWrapper
+		err = json.Unmarshal([]byte(tuple[1]), &offsetWrapper)
+		offsetTable[queue] = offsetWrapper
+	}
+	consumeStats.OffsetTable = offsetTable
+	return err
 }

@@ -51,6 +51,8 @@ type Admin interface {
 	UpdateBrokerConfig(addr, configKey, configValue string) error
 	GetNamesrvConfig(addr string) (map[string]string, error)
 	UpdateNamesrvConfig(addr, configKey, configValue string) error
+	ExamineTopicStats(topic string) (*TopicStatsTable, error)
+	ExamineTopicConsumeStats(group, topic string) (*ConsumeStats, error)
 	Close() error
 }
 
@@ -496,6 +498,67 @@ func (a *admin) UpdateNamesrvConfig(addr, configKey, configValue string) error {
 		return fmt.Errorf("update namesrv config error, %s", res.Remark)
 	}
 	return nil
+}
+
+func (a *admin) ExamineTopicStats(topic string) (*TopicStatsTable, error) {
+	var topicStatsTable = TopicStatsTable{
+		OffsetTable: make(map[primitive.MessageQueue]TopicOffset),
+	}
+	topicRouteData, err := a.ExamineTopicRouteInfo(context.Background(), topic)
+	if err != nil {
+		return &topicStatsTable, err
+	}
+
+	for _, brokerData := range topicRouteData.BrokerDataList {
+		addr := brokerData.SelectBrokerAddr()
+		if len(addr) > 0 {
+			request := &internal.GetTopicStatsInfoRequestHeader{Topic: topic}
+			cmd := remote.NewRemotingCommand(internal.ReqGetTopicStatsInfo, request, nil)
+			res, err := a.cli.InvokeSync(context.Background(), addr, cmd, 5*time.Second)
+			if err == nil {
+				if res.Code == internal.ResSuccess {
+					var tst TopicStatsTable
+					err := tst.Decode(string(res.Body))
+					if err == nil {
+						for key, value := range tst.OffsetTable {
+							topicStatsTable.OffsetTable[key] = value
+						}
+					} else {
+						return &topicStatsTable, err
+					}
+				} else {
+					err = fmt.Errorf("get topic stats error: CODE:%d, Remark:%s", res.Code, res.Remark)
+				}
+			}
+		}
+	}
+	return &topicStatsTable, err
+}
+
+func (a *admin) ExamineTopicConsumeStats(group, topic string) (*ConsumeStats, error) {
+	retryTopic := internal.GetRetryTopic(group)
+	topicRouteData, err := a.ExamineTopicRouteInfo(context.Background(), retryTopic)
+
+	request := &internal.GetConsumeStatsRequestHeader{
+		ConsumerGroup: group,
+		Topic:         topic,
+	}
+	cmd := remote.NewRemotingCommand(internal.ReqGetConsumerStats, request, nil)
+
+	for _, brokerData := range topicRouteData.BrokerDataList {
+		addr := brokerData.BrokerAddresses[internal.MasterId]
+		res, err := a.cli.InvokeSync(context.Background(), addr, cmd, 5*time.Second)
+		if err == nil {
+			if res.Code == internal.ResSuccess {
+				var consumeStats ConsumeStats
+				err := consumeStats.Decode(string(res.Body))
+				return &consumeStats, err
+			} else {
+				err = fmt.Errorf("get consumer stats error: CODE:%d, Remark:%s", res.Code, res.Remark)
+			}
+		}
+	}
+	return nil, err
 }
 
 func (a *admin) Close() error {
